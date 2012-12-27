@@ -20,21 +20,19 @@ class Vente extends PolarObject {
         'Permanencier' => 'Utilisateur');
     protected static $nulls = array(
         'Asso');
-        
+
     public function __construct($article, $qte, $paiement='cb', $permanencier='2',
                                 $tarif='normal', $asso=NULL, $client='',
-                                $idvente=NULL) {
+                                $idvente=NULL, $db=NULL) {
         if ($qte instanceof PolarDB) {
             parent::__construct($article, $qte);
         }
         else {
             if ($idvente==NULL) $idvente = self::generate_idvente();
-            
-            if (!($article instanceof Article))
-                throw new InvalidValue('$article n\'est pas un article');
+
             if ($qte <= 0)
                 throw new InvalidValue('Quantite <= 0');
-            
+
             $attrs = array('IDVente' => $idvente,
                            'Article' => $article,
                            'Date' => 'NOW()',
@@ -46,10 +44,10 @@ class Vente extends PolarObject {
                            'MoyenPaiement' => $paiement,
                            'Quantite' => $qte,
                            'Permanencier' => $permanencier);
-            parent::__construct($attrs);
+            parent::__construct($attrs, $db);
         }
     }
-    
+
     public function __set($attr, $value) {
         if ($attr === 'Quantite' and is_int($value)) {
             $this->values[$attr] = $value;
@@ -60,7 +58,7 @@ class Vente extends PolarObject {
             parent::__set($attr, $value);
         }
     }
-    
+
     private function calcule_prix() {
         //if ($this->
         // On gère la remise sur quantité
@@ -79,17 +77,16 @@ class Vente extends PolarObject {
         else {
             $prix = $q * $a->PrixVenteAsso;
         }
-        $tva = ($prix - ($q * $a->PrixAchat)) * $a->TVA;
-        if ($tva < 0) $tva = 0;
+        $tva = $prix * $a->TVA;
         return array($prix, $tva);
     }
-    
+
     public function create_similaire($article, $qte) {
         return new Vente($article, $qte, $this->MoyenPaiement,
                          $this->Permanencier, $this->Tarif, $this->Asso,
-                         $this->Client, $this->IDVente);
+                         $this->Client, $this->IDVente, $this->db);
     }
-    
+
     static function generate_idvente() {
         return 1;
     }

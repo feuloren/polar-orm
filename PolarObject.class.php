@@ -79,7 +79,7 @@ On peut aussi définir des fonctions relatives à l'objet représenté
 */
 abstract class PolarObject implements PolarSaveable {
     private $id = NULL;
-    private $db = NULL;
+    protected $db = NULL;
     protected static $attrs = array();
     protected static $nulls = array();
     protected $values;
@@ -179,8 +179,7 @@ abstract class PolarObject implements PolarSaveable {
                 if($this->db->validObject($expected, $value))
                     $this->values[$attr] = $value;
                 else
-                    throw new InvalidValue('No object \''.
-                                           $this::$attrs[$value]
+                    throw new InvalidValue('No object \''.$expected
                                            .'\' has id '.$value);
             }
             else
@@ -231,7 +230,7 @@ abstract class PolarObject implements PolarSaveable {
             return $this->initial_insert();
 
         if (empty($this->modified))
-            return "";
+            return ";";
 
         $query = 'UPDATE '.$this::$table.' SET ';
         foreach ($this->modified as $attr => $thing) {

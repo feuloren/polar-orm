@@ -23,9 +23,9 @@ class PolarDB {
     public function save() {
         foreach (func_get_args() as $obj) {
             if ($obj instanceof PolarSaveable) {
-                call_user_func(array($this, 'save'), $obj->get_necessaires());
+                call_user_func_array(array($this, 'save'), $obj->get_necessaires());
                 $this->do_save($obj);
-                call_user_func(array($this, 'save'), $obj->get_dependants());
+                call_user_func_array(array($this, 'save'), $obj->get_dependants());
             }
         }
     }
@@ -71,6 +71,7 @@ class PolarDB {
 
     private function do_save($obj) {
         $todo = $obj->save();
+        $obj->set_db($this);
 
         // La méthode save peut retourner une commande
         // ou une liste de commande à éxécuter

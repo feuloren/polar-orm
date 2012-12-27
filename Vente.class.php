@@ -7,7 +7,7 @@ class Vente extends PolarObject {
     protected static $attrs = array(
         'IDVente' => T_INT,
         'Article' => 'Article',
-        'Date' => T_DATE,
+        'Date' => T_STR,
         'Tarif' => array('asso', 'normal'),
         'Finalise' => T_BOOL,
         'Asso' => 'Asso',
@@ -21,7 +21,7 @@ class Vente extends PolarObject {
     protected static $nulls = array(
         'Asso');
         
-    public function __construct($article, $qte, $paiement, $permanencier,
+    public function __construct($article, $qte, $paiement='cb', $permanencier='2',
                                 $tarif='normal', $asso=NULL, $client='',
                                 $idvente=NULL) {
         if ($qte instanceof PolarDB) {

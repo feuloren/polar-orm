@@ -5,6 +5,18 @@ require_once 'PolarDB.class.php';
 require_once 'Article.class.php';
 require_once 'Vente.class.php';
 
+class TestObject extends PolarObject {
+    public static $table = 'tests';
+    protected static $attrs = array(
+        'Texte' => T_STR,
+        'Nombre' => T_INT,
+        'Liste' => array('a', 'b', 'c', 'd'),
+        'Flottant' => T_FLOAT,
+        'Booleen' => T_BOOL,
+        'Objet' => 'TestObject');
+    protected static $nulls = array('Objet');
+}
+
 class PolarORMTest extends PHPUnit_Framework_TestCase
 {
     public function setUp() {
@@ -13,15 +25,50 @@ class PolarORMTest extends PHPUnit_Framework_TestCase
 
     public function testTypeDetection() {
         $this->assertFalse(type_is_object(T_STR));
-        $this->assertFalse(type_is_object(T_IP));
-        $this->assertFalse(type_is_object(T_DATE));
         $this->assertFalse(type_is_object(T_INT));
         $this->assertFalse(type_is_object(T_BOOL));
         $this->assertFalse(type_is_object(T_FLOAT));
-        $this->assertFalse(type_is_object(T_MAIL));
         $this->assertFalse(type_is_object(array('member', 'private', 'public')));
         $this->assertTrue(type_is_object('Utilisateur'));
         $this->assertTrue(type_is_object('Page'));
+    }
+
+    public function testPolarObject() {
+        $o = new TestObject(array("Texte" => "Bonjour",
+                                  "Nombre" => 42,
+                                  "Liste" => "b",
+                                  "Booleen" => True,
+                                  "Flottant" => 9.456,
+                                  "Objet" => NULL));
+        $this->assertSame("Bonjour", $o->Texte);
+        $this->assertSame(42, $o->Nombre);
+        $this->assertSame("b", $o->Liste);
+        $this->assertSame(9.456, $o->Flottant);
+        $this->assertTrue($o->Booleen);
+        $o->Flottant = "coucou";
+        $this->assertSame(0.0, $o->Flottant);
+        $o->Nombre = "truc";
+        $this->assertSame(0, $o->Nombre);
+        $o->Booleen = "faux";
+        $this->assertSame(True, $o->Booleen);
+
+        $p = new TestObject(array("Texte" => "A",
+                                  "Nombre" => 0,
+                                  "Liste" => "a",
+                                  "Flottant" => 9,
+                                  "Booleen" => False,
+                                  "Objet" => $o));
+        $this->assertFalse($p->Booleen);
+        $this->assertSame($o, $p->Objet);
+        return $p;
+    }
+
+    /**
+     * @expectedException InvalidValue
+     * @depends testPolarObject
+     */
+    public function testInvalidValueListe($o) {
+        $o->Liste = "x";
     }
 
     public function testDroitsPage()
@@ -51,15 +98,15 @@ class PolarORMTest extends PHPUnit_Framework_TestCase
         $this->assertEmpty(array_diff(array(4), $droits->droits));
         $this->assertEmpty($droits->to_remove);
         $this->assertEmpty($droits->to_add);
-        $this->assertEmpty($droits->get_necessaires()); 
+        $this->assertEmpty($droits->get_necessaires());
     }
-    
+
     public function testUtilisateur() {
         $u = new Utilisateur(array('Nom' => 'Thévenet'));
         $this->assertEquals('Thévenet', $u->Nom);
         return $u;
     }
-    
+
     /**
      * @expectedException InvalidValue
      * @depends testUtilisateur
@@ -67,7 +114,7 @@ class PolarORMTest extends PHPUnit_Framework_TestCase
     public function testInvalidVal($u) {
         $u->Sexe = 'b';
     }
-    
+
     /**
      * @expectedException InvalidAttribute
      * @depends testUtilisateur
@@ -75,7 +122,7 @@ class PolarORMTest extends PHPUnit_Framework_TestCase
     public function testInvalidAttr($u) {
         $u->Bonjour = NULL;
     }
-    
+
     /**
      * @expectedException NotNullable
      * @depends testUtilisateur
@@ -83,22 +130,14 @@ class PolarORMTest extends PHPUnit_Framework_TestCase
     public function testNotNullable($u) {
         $u->Email = NULL;
     }
-    
-    /**
-     * @expectedException InvalidType
-     * @depends testUtilisateur
-     */
-    public function testInvalidType($u) {
-        $u->Email = array();
-    }
-    
+
     /**
      * @expectedException PDOException
      */
     public function testConnexion() {
         $a = new PolarDB("localhost", "polar", "choux", "fleur");
     }
-    
+
     /**
      * @depends testTypeDetection
      */
@@ -116,7 +155,7 @@ class PolarORMTest extends PHPUnit_Framework_TestCase
         $this->assertEquals($u->Telephone, '0663469246');
         $this->assertCount(0, $u->get_dependants());
         $this->assertCount(0, $u->get_necessaires());
-        
+
         $u->Nom = "Moimoi";
         $this->assertEquals("Moimoi", $u->Nom);
         $u->Sexe = "f";
@@ -126,12 +165,12 @@ class PolarORMTest extends PHPUnit_Framework_TestCase
         $this->assertEquals("UPDATE polar_utilisateurs SET  `Nom`=\"Moimoi\", `Sexe`=\"f\", `Staff`=0 WHERE ID=913",
             $u->save());
         $this->assertEquals("", $u->save());
-        
+
         $bureau = $this->db->fetchAll('Utilisateur', 'Bureau=1');
         $this->assertCount(6, $bureau);
         return $u;
     }
-   
+
     /**
      * @depends testLoadFromDB
      */
@@ -140,8 +179,9 @@ class PolarORMTest extends PHPUnit_Framework_TestCase
         $this->assertEquals("3", format_attr(3));
         $this->assertEquals("1.4567864456556", format_attr(1.4567864456556));
         $this->assertEquals("913", format_attr($u));
+        $this->assertEquals("NULL", format_attr(NULL));
     }
-    
+
     /**
      * @depends testLoadFromDB
      */
@@ -170,7 +210,7 @@ class PolarORMTest extends PHPUnit_Framework_TestCase
         $v[] = $v[0]->create_similaire($article2, 150);
         $v[] = $v[0]->create_similaire($article2, 300);
     }
-    
+
     /**
      * @depends testLoadFromDB
      * @depends testDroitsPage
@@ -180,6 +220,44 @@ class PolarORMTest extends PHPUnit_Framework_TestCase
         $manuels = $this->db->fetchOne('Page', 13);
         $this->assertEquals('public', $membres->Acces);
         $this->assertEquals('private', $manuels->Acces);
+    }
+
+    public function testInitialSave() {
+        $u = new Utilisateur(array(
+                                'IPClient' => '127.0.0.1',
+                                'DateCreation' => 'NOW()',
+                                'Login' => 'abcdefgh',
+                                'MotDePasse' => '******',
+                                'Email' => 'abcdefgh@etu.utc.fr',
+                                'Staff' => 1,
+                                'Bureau' => 0,
+                                'Ancien' => 0,
+                                'Responsable' => NULL,
+                                'Poste' => NULL,
+                                'Presentation' => '',
+                                'Nom' => 'Super',
+                                'Prenom' => 'Man',
+                                'Sexe' => 'm',
+                                'Telephone' => NULL,
+                                'Newsletter' => 0));
+        $this->db->save($u);
+        $u->set_id(913);
+        //$this->assertEquals(1446, $u->get_id());
+        return $u;
+    }
+
+    /**
+     * @depends testInitialSave
+     */
+    public function testIncrementalSave($u) {
+        $u->Telephone = "0663469246";
+        $this->assertEquals("UPDATE polar_utilisateurs SET  `Telephone`=\"0663469246\" WHERE ID=913", $u->save());
+        $this->assertEquals("", $u->save());
+    }
+
+    public function testValidObject() {
+        $this->assertTrue($this->db->validObject('Utilisateur', 913));
+        $this->assertFalse($this->db->validObject('Utilisateur', 0));
     }
 }
 ?>

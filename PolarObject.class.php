@@ -4,10 +4,7 @@ const T_STR = 'string';
 const T_INT = 'integer';
 const T_FLOAT = 'double';
 const T_BOOL = 'boolean';
-const T_DATE = 'date';
-const T_MAIL = 'mail';
-const T_IP = 'ip';
-$STATIC_TYPES = array(T_STR, T_INT, T_FLOAT, T_BOOL, T_DATE, T_MAIL, T_IP);
+$STATIC_TYPES = array(T_STR, T_INT, T_FLOAT, T_BOOL);
 
 class InvalidAttribute extends Exception { }
 class InvalidType extends Exception {
@@ -27,7 +24,11 @@ function type_is_object($type) {
 function format_attr($value) {
     switch (gettype($value)) {
     case 'string':
-        return '"'.$value.'"';
+        // un peu violent mais facilite la vie
+        if ($value === 'NOW()')
+            return $value;
+        else
+            return '"'.$value.'"';
     case 'integer':
     case 'double':
         return (string) $value;
@@ -35,6 +36,8 @@ function format_attr($value) {
         return ($value ? "1" : "0");
     case 'object':
         return (string) $value->get_id();
+    default:
+        return "NULL";
     }
 }
 
@@ -83,11 +86,16 @@ abstract class PolarObject implements PolarSaveable {
     protected $modified;
     protected static $table;
 
-    public function __construct($data=NULL, $db=NULL) {
-        if ($db === NULL)
+    public function __construct(array $data=NULL, PolarDB $db=NULL) {
+        if ($db == NULL)
+            $this->db = new FakeDB();
+        else
+            $this->db = $db;
+
+        if ($data === NULL or !isset($data['ID']))
             $this->__construct_from_data($data);
         else
-            $this->__construct_from_db($data, $db);
+            $this->__construct_from_db($data);
     }
 
     /*
@@ -97,149 +105,134 @@ abstract class PolarObject implements PolarSaveable {
     L'identifiant de l'objet est NULL, il faut sauvegarder l'objet en utilisant
      PolarDB::save pour l'enregistrer et lui attribuer un ID
     */
-    private function __construct_from_data($data=NULL) {
+    private function __construct_from_data(array $data) {
         $this->values = array();
-        if ($data != NULL) {
+        if ($data !== NULL) {
             foreach ($data as $key => $value) {
                 $this->__set($key, $value);
             }
         }
     }
-    
+
     /*
     Crée un nouvel objet à partir de la base de donnée
     Les objets liés sont automatiquement chargés
     */
-    private function __construct_from_db($data, $db) {
-        $this->set_db($db);
-        
-        //var_dump($data);
+    private function __construct_from_db(array $data) {
         foreach ($this::$attrs as $key => $type) {
             if (!array_key_exists($key, $data))
                 throw new InvalidModel("Key '$key' expected but not present in the database");
             if (type_is_object($type) and $data[$key] !== NULL and $data[$key] != 0) {
-                $object = $db->fetchOne($type, $data[$key]);
-                $this->__set($key, $object);
+                $this->__set($key, intval($data[$key]));
             } else {
                 $this->__set($key, $data[$key]);
             }
         }
-        $this->set_id($data['ID']);
+        $this->set_id((int) $data['ID']);
     }
-    
+
     public function __get($attr) {
         if (!array_key_exists($attr, $this::$attrs))
             throw new InvalidAttribute($attr);
 
+        if (!array_key_exists($attr, $this->values))
+            return NULL;
+
+        if (type_is_object($this::$attrs[$attr]) and
+            is_int($this->values[$attr])) {
+            $o = $this->db->fetchOne($this::$attrs[$attr],
+                                     $this->values[$attr]);
+            $this->values[$attr] = $o;
+        }
         return $this->values[$attr];
     }
-    
+
     public function __set($attr, $value) {
         if (!array_key_exists($attr, $this::$attrs))
             throw new InvalidAttribute($attr);
 
+        $expected = $this::$attrs[$attr];
+        // 1er cas : si la value est null
+        // et qu'on a pas le droit : on renvoie une exception
         if ($value === NULL) {
             if (in_array($attr, $this::$nulls))
                 $this->values[$attr] = $value;
             else
                 throw new NotNullable($attr);
         }
-        else if (is_array($this::$attrs[$attr])) {
-            if (in_array($value, $this::$attrs[$attr]))
+        // Deuxième cas : si on a un enum
+        // On teste si la valeur est autorisée sinon exception
+        else if (is_array($expected)) {
+            if (in_array($value, $expected))
                 $this->values[$attr] = $value;
             else
                 throw new InvalidValue("$value not in allowed values for $attr");
         }
+        // 3eme cas : on attend un objet,
+        // Si on reçoie un objet de la bonne classe c'est cool
+        // Si c'est un int on vérifie que la ligne existe bien dans la base
+        // Sinon exception
+        else if (type_is_object($expected)) {
+            if (is_object($value) and get_class($value) === $expected)
+                $this->values[$attr] = $value;
+            else if (is_int($value)) {
+                if($this->db->validObject($expected, $value))
+                    $this->values[$attr] = $value;
+                else
+                    throw new InvalidValue('No object \''.
+                                           $this::$attrs[$value]
+                                           .'\' has id '.$value);
+            }
+            else
+                throw new InvalidType($attr, gettype($value), $expected);
+        }
+        // Finalement on va tenter de convertir la valeur reçue vers la type attendu
+        // En cas d'échec on balance une exception
         else {
             $val_type = gettype($value);
-            $expected = $this::$attrs[$attr];
-            switch ($val_type) {
-            case 'integer':
-                if ($expected === T_FLOAT or $expected === T_INT)
-                    $this->values[$attr] = $value;
-                elseif ($expected === T_BOOL)
-                    $this->values[$attr] = (bool) $value;
-                else
-                    throw new InvalidType($attr, $val_type, $expected);
-                break;
-            case 'boolean':
-                if ($expected === T_BOOL)
-                    $this->values[$attr] = $value;
-                else 
-                    throw new InvalidType($attr, $val_type, $expected);
-                break;
-            case 'double':
-                if ($expected === T_FLOAT)
-                    $this->values[$attr] = $value;
-                else 
-                    throw new InvalidType($attr, $val_type, $expected);
-                break;
-            case 'string':
-                if ($expected == T_STR)
-                    $this->values[$attr] = $value;
-                elseif ($expected === T_IP and
-                        preg_match("/\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}/i", $value))
-                    $this->values[$attr] = $value;
-                elseif ($expected === T_MAIL and
-                        preg_match("/.*@.*\..*/", $value))
-                    $this->values[$attr] = $value;
-                elseif ($expected === T_DATE)
-                    $this->values[$attr] = $value;
-                elseif ($expected === T_BOOL)
-                    $this->values[$attr] = (bool) $value;
-                elseif ($expected === T_INT)
-                    $this->values[$attr] = intval($value);
-                elseif ($expected === T_FLOAT)
-                    $this->values[$attr] = (double) $value;
-                else
-                    throw new InvalidType($attr, $val_type, $expected);
-                break;
-            case 'object':
-                $obj_type = get_class($value);
-                if ($obj_type === $expected)
-                    $this->values[$attr] = $value;
-                else
-                    throw new InvalidType($attr, $obj_type, $expected);
-                break;
-            default:
-                throw new InvalidType($attr, $val_type, $expected);
-            }
+            if (settype($value, $expected))
+                $this->values[$attr] = $value;
+            else
+                throw new InvalidValue("Could not convert $value from $val_type to $expected");
         }
         if ($this->id !== NULL)
             $this->modified[$attr] = 1;
     }
-    
-    public function set_db($db) {
+
+    public function set_db(PolarDB $db) {
         $this->db = $db;
     }
-    
+
     public function get_id() {
         return $this->id;
     }
-    
+
     public function set_id($id) {
         if ($this->id == NULL)
             $this->id = $id;
     }
-    
+
     public function get_necessaires() {
         $objs = array();
-        
+
         foreach ($this->values as $obj) {
             if ($obj instanceof PolarSaveable)
                 $objs[] = $obj;
         }
         return $objs;
     }
-    
+
     public function get_dependants() {
         return array();
     }
-    
+
     public function save() {
+        if ($this->id === NULL)
+            return $this->initial_insert();
+
         if (empty($this->modified))
             return "";
-    
+
         $query = 'UPDATE '.$this::$table.' SET ';
         foreach ($this->modified as $attr => $thing) {
             $value = $this->values[$attr];
@@ -247,10 +240,43 @@ abstract class PolarObject implements PolarSaveable {
         }
         $query = substr($query, 0, -1);
         $query .= ' WHERE ID='.$this->id;
-        
+
         $this->modified = array();
-        
+
         return $query;
+    }
+
+    private function initial_insert() {
+        if ($this->id !== NULL)
+            return "";
+
+        $fields = array();
+        $values = array();
+        foreach ($this::$attrs as $key => $value) {
+            $fields[] = $key;
+            $values[] = format_attr($this->values[$key]);
+        }
+        $values = implode($values, ',');
+        $fields = implode($fields, ',');
+        $r = 'INSERT INTO '.$this::$table.' ('.$fields.') VALUES ('.$values.')';
+        return $r;
+    }
+}
+
+class FakeDB {
+    public function save($obj) {
+    }
+
+    public function fetchOne($type, $query) {
+        return $query;
+    }
+
+    public function fetchAll($type, $query='1', $limit=NULL) {
+        return $query;
+    }
+
+    public function validObject($type, $query) {
+        return False;
     }
 }
 ?>

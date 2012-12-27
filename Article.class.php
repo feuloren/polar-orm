@@ -25,7 +25,7 @@ class Article extends PolarObject {
         "Photo" =>  T_STR,
         "EAN13" => T_STR,
         "Auteur" => 'Utilisateur',
-        "Date" => T_DATE);
+        "Date" => T_STR);
     protected static $nulls = array(
         'StockInitial', 'Stock', 'SeuilAlerte',
         'EAN13', 'Auteur');

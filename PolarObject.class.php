@@ -17,8 +17,9 @@ class InvalidModel extends Exception { }
 class AttributesNotComplete extends Exception { }
 
 function type_is_object($type) {
-    global $STATIC_TYPES;
-    return !(in_array($type, $STATIC_TYPES) or is_array($type));
+    return !($type == T_STR or $type == T_INT or
+             $type == T_FLOAT or $type == T_BOOL or
+             is_array($type));
 }
 
 function format_attr($value) {
@@ -86,7 +87,7 @@ abstract class PolarObject implements PolarSaveable {
     protected $modified;
     protected static $table;
 
-    public function __construct(array $data=NULL, PolarDB $db=NULL) {
+    public function __construct(array $data=NULL, $db=NULL) {
         if ($db == NULL)
             $this->db = new FakeDB();
         else
@@ -260,6 +261,20 @@ abstract class PolarObject implements PolarSaveable {
         $r = 'INSERT INTO '.$this::$table.' ('.$fields.') VALUES ('.$values.')';
         return $r;
     }
+
+    /**
+     * format_from_attributes
+     * Remplace les formes {{NomAttribut}} par la valeur de l'attribut dans $text
+     */
+    public function format_from_attributes($text) {
+      $patterns = array();
+      $replacements = array();
+      foreach ($this::$attrs as $key => $type) {
+        $patterns[] = "/\{\{$key\}\}/";
+        $replacements[] = $this->__get($key);
+      }
+      return preg_replace($patterns, $replacements, $text);
+    }
 }
 
 class FakeDB {
@@ -271,7 +286,7 @@ class FakeDB {
     }
 
     public function fetchAll($type, $query='1', $limit=NULL) {
-        return $query;
+        return array();
     }
 
     public function validObject($type, $query) {

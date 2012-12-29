@@ -164,7 +164,7 @@ class PolarORMTest extends PHPUnit_Framework_TestCase
         $this->assertFalse($u->Staff);
         $this->assertEquals("UPDATE polar_utilisateurs SET  `Nom`=\"Moimoi\", `Sexe`=\"f\", `Staff`=0 WHERE ID=913",
             $u->save());
-        $this->assertEquals("", $u->save());
+        $this->assertEquals(";", $u->save());
 
         $bureau = $this->db->fetchAll('Utilisateur', 'Bureau=1');
         $this->assertCount(6, $bureau);
@@ -198,14 +198,14 @@ class PolarORMTest extends PHPUnit_Framework_TestCase
         $this->assertEquals('normal', $v[0]->Tarif);
         $this->assertEquals(NULL, $v[0]->Asso);
         $this->assertEquals(10, $v[0]->PrixFacture);
-        $this->assertEquals((10-6)*0.196, $v[0]->MontantTVA);
+        $this->assertEquals(10*0.196, $v[0]->MontantTVA);
         $v[] = $v[0]->create_similaire($article1, 12);
         $this->assertEquals(12, $v[1]->Quantite);
         $this->assertEquals('cb', $v[1]->MoyenPaiement);
         $this->assertEquals('normal', $v[1]->Tarif);
         $this->assertEquals(NULL, $v[1]->Asso);
         $this->assertEquals(54, $v[1]->PrixFacture);
-        $this->assertEquals((54-36)*0.196, $v[1]->MontantTVA);
+        $this->assertEquals(54*0.196, $v[1]->MontantTVA);
         $v[] = $v[0]->create_similaire($article2, 30);
         $v[] = $v[0]->create_similaire($article2, 150);
         $v[] = $v[0]->create_similaire($article2, 300);
@@ -241,8 +241,7 @@ class PolarORMTest extends PHPUnit_Framework_TestCase
                                 'Telephone' => NULL,
                                 'Newsletter' => 0));
         $this->db->save($u);
-        $u->set_id(913);
-        //$this->assertEquals(1446, $u->get_id());
+        $this->assertNotNull($u->get_id());
         return $u;
     }
 
@@ -251,8 +250,9 @@ class PolarORMTest extends PHPUnit_Framework_TestCase
      */
     public function testIncrementalSave($u) {
         $u->Telephone = "0663469246";
-        $this->assertEquals("UPDATE polar_utilisateurs SET  `Telephone`=\"0663469246\" WHERE ID=913", $u->save());
-        $this->assertEquals("", $u->save());
+        $this->assertEquals("UPDATE polar_utilisateurs SET  `Telephone`=\"0663469246\" WHERE ID=".$u->get_id(), $u->save());
+        $this->assertEquals(";", $u->save());
+        $this->db->query("DELETE FROM polar_utilisateurs WHERE ID=".$u->get_id());
     }
 
     public function testValidObject() {

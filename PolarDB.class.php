@@ -1,6 +1,7 @@
 <?php
 
 require_once 'PolarObject.class.php';
+require_once 'PolarObjectsArray.class.php';
 
 class PolarDB {
     private $db;
@@ -45,7 +46,7 @@ class PolarDB {
 
         $result = $this->query($req);
 
-        $objects = array();
+        $objects = new PolarObjectsArray();
         foreach ($result as $ligne) {
             $obj = new $type($ligne, $this);
             $objects[] = $obj;
@@ -60,7 +61,7 @@ class PolarDB {
                           $type::$table.
                           ' WHERE ID='.$id);
 
-        return $r->fetch()[0] > 0;
+        return $r->fetchColumn() > 0;
     }
 
     public function query($query) {
@@ -87,11 +88,11 @@ class PolarDB {
         }
         else {
             $this->db->exec($todo);
-            /*if ($obj instanceof PolarObject and $obj->get_id() === NULL) {
-                $new_id = $this->db->insert_id();
+            if ($obj instanceof PolarObject and $obj->get_id() === NULL) {
+                $new_id = $this->db->lastInsertId();
                 $obj->set_id($new_id);
                 //$this->objects_store[get_class($obj)][$new_id] = $obj;
-            }*/
+            }
         }
     }
 }

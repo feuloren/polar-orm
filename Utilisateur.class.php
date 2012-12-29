@@ -30,6 +30,6 @@ class Utilisateur extends PolarObject {
     }
 
     public function send_mail($from, $from_nom, $sujet, $html, $pj=array()) {
-      sendMail($from, $from_nom, $this->Email, $sujet, $html, $pj);
+      //sendMail($from, $from_nom, $this->Email, $sujet, $html, $pj);
     }
 }

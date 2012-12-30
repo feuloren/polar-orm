@@ -252,12 +252,24 @@ class PolarORMTest extends PHPUnit_Framework_TestCase
         $u->Telephone = "0663469246";
         $this->assertEquals("UPDATE polar_utilisateurs SET  `Telephone`=\"0663469246\" WHERE ID=".$u->get_id(), $u->save());
         $this->assertEquals(";", $u->save());
-        $this->db->query("DELETE FROM polar_utilisateurs WHERE ID=".$u->get_id());
+        return $u;
     }
 
     public function testValidObject() {
         $this->assertTrue($this->db->validObject('Utilisateur', 913));
         $this->assertFalse($this->db->validObject('Utilisateur', 0));
     }
+
+    /**
+     * @depends testIncrementalSave
+     * @depends testValidObject
+     */
+    function testDelete($u) {
+        $id = $u->get_id();
+        $this->assertTrue($this->db->validObject('Utilisateur', $id));
+        $this->db->delete($u);
+        $this->assertFalse($this->db->validObject('Utilisateur', $id));
+    }
+
 }
 ?>

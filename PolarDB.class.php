@@ -68,6 +68,15 @@ class PolarDB {
         return $this->db->query($query);
     }
 
+    public function delete() {
+        foreach (func_get_args() as $obj) {
+          if ($obj instanceof PolarObject and !is_null($obj->get_id())) {
+              $this->db->exec('DELETE FROM '.$obj::$table.
+                              ' WHERE ID='.$obj->get_id());
+            }
+        }
+    }
+
     ### Private functions
 
     private function do_save($obj) {

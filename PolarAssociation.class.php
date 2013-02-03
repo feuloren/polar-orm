@@ -10,8 +10,11 @@ require_once 'PolarObject.class.php';
  * Ex : si $start = 'Page' et $destination = 'Utilisateur' et
  *         $table = 'polar_securite_droits'
  *      alors l'association représentera la liste des utilisateur qui ont le droit d'accèder à cette page
+ *
+ * Cette classe implémente ArrayAccess, Countable et Iterator pour permettre
+ *   de l'utiliser comme un array (foreach, count, [1], [] = ...)
  */
-class PolarAssociation implements PolarSaveable {
+class PolarAssociation implements PolarSaveable, ArrayAccess, Countable, Iterator {
     public $table;
     private $id;
     private $db;
@@ -22,6 +25,8 @@ class PolarAssociation implements PolarSaveable {
     public $list;
     public $to_remove;
     public $to_add;
+
+    private $position;
    
     public function __construct($table, $start, $startName, $destination,
                                 $destName, $db, $id=NULL) {
@@ -36,6 +41,7 @@ class PolarAssociation implements PolarSaveable {
         $this->to_add = array();
         $this->to_remove = array();
         $this->load_from_db();
+        $this->position = 0;
     }
 
     public function load_from_db() {
@@ -49,7 +55,7 @@ class PolarAssociation implements PolarSaveable {
                                        $this->startName .' = '.
                                        $this->id);
             foreach ($result as $dest)
-                $this->list[] = $dest[$this->destName];
+                $this->list[] = (int) $dest[$this->destName];
         }
     }
 
@@ -127,5 +133,53 @@ class PolarAssociation implements PolarSaveable {
     public function get_id() {
         return $this->id;
     }
+
+    /**
+     * Ci dessous les implémentations des méthodes pour les interfaces
+     * ArrayAcces, Countable et Iterator
+     */
+    function rewind() {
+        $this->position = 0;
+    }
+
+    function current() {
+        return $this->list[$this->position];
+    }
+
+    function key() {
+        return $this->position;
+    }
+
+    function next() {
+        ++$this->position;
+    }
+
+    function valid() {
+        return isset($this->list[$this->position]);
+    }
+
+    public function offsetSet($offset, $value) {
+        if (is_null($offset))
+            $this->add($value);
+        else
+            throw new Exception("Use add and remove methods instead of direct array access");
+    }
+
+    public function offsetExists($offset) {
+        return isset($this->list[$offset]);
+    }
+
+    public function offsetUnset($offset) {
+        throw new Exception("Use add and remove methods instead of direct array access");
+    }
+
+    public function offsetGet($offset) {
+        return isset($this->list[$offset]) ? $this->list[$offset] : null;
+    }
+    
+    public function count() {
+        return count($this->list);
+    }
+
 }
 ?>

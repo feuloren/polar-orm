@@ -22,11 +22,18 @@ class PolarDB {
     }
 
     public function save() {
+        $this->saving = array();
+        call_user_func_array(array($this, 'iter_save'), func_get_args());
+        $this->saving = array();
+    }
+
+    private function iter_save() {
         foreach (func_get_args() as $obj) {
-            if ($obj instanceof PolarSaveable) {
-                call_user_func_array(array($this, 'save'), $obj->get_necessaires());
+            if ($obj instanceof PolarSaveable && !(in_array($obj, $this->saving))) {
+                $this->saving[] = $obj;
+                call_user_func_array(array($this, 'iter_save'), $obj->get_necessaires());
                 $this->do_save($obj);
-                call_user_func_array(array($this, 'save'), $obj->get_dependants());
+                call_user_func_array(array($this, 'iter_save'), $obj->get_dependants());
             }
         }
     }

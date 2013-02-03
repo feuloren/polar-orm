@@ -21,11 +21,11 @@ class Vente extends PolarObject {
     protected static $nulls = array(
         'Asso');
 
-    public function __construct($article, $qte, $paiement='cb', $permanencier='2',
+    public function __construct($article, $qte=1, $paiement='cb', $permanencier='2',
                                 $tarif='normal', $asso=NULL, $client='',
-                                $idvente=NULL, $db=NULL) {
-        if ($qte instanceof PolarDB) {
-            parent::__construct($article, $qte);
+                                $idvente=NULL) {
+        if (is_array($article)) {
+            parent::__construct($article);
         }
         else {
             if ($idvente==NULL) $idvente = self::generate_idvente();
@@ -44,7 +44,7 @@ class Vente extends PolarObject {
                            'MoyenPaiement' => $paiement,
                            'Quantite' => $qte,
                            'Permanencier' => $permanencier);
-            parent::__construct($attrs, $db);
+            parent::__construct($attrs);
         }
     }
 
@@ -84,11 +84,17 @@ class Vente extends PolarObject {
     public function create_similaire($article, $qte) {
         return new Vente($article, $qte, $this->MoyenPaiement,
                          $this->Permanencier, $this->Tarif, $this->Asso,
-                         $this->Client, $this->IDVente, $this->db);
+                         $this->Client, $this->IDVente);
     }
 
-    static function generate_idvente() {
-        return 1;
+    function generate_idvente() {
+        if ($this::$db == NULL)
+            throw new Exception("PolarObject::$db must be set to use generate_idvente");
+
+        $result = $this::$db->query("SELECT GREATEST(pcvg.MaxIDVente, pcv.MaxIDVente) + 1 AS MaxIDVente FROM
+(SELECT COALESCE(MAX(IDVente), 0) AS MaxIDVente FROM polar_caisse_ventes_global) pcvg,
+(SELECT COALESCE(MAX(IDVente), 0) AS MaxIDVente FROM polar_caisse_ventes) pcv");
+        return $result->fetchColumn();
     }
 }
 

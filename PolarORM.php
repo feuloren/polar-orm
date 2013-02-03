@@ -4,4 +4,5 @@ spl_autoload_register(function ($class) {
   });
 
 $db = new PolarDB('localhost', 'polar', 'root', 'root');
+PolarObject::$db = $db;
 ?>

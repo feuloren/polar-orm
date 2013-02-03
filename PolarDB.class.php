@@ -48,7 +48,7 @@ class PolarDB {
 
         $objects = new PolarObjectsArray();
         foreach ($result as $ligne) {
-            $obj = new $type($ligne, $this);
+            $obj = new $type($ligne);
             $objects[] = $obj;
             //$this->objects_store[$type][$] = $obj;
         }
@@ -81,7 +81,6 @@ class PolarDB {
 
     private function do_save($obj) {
         $todo = $obj->save();
-        $obj->set_db($this);
 
         // La méthode save peut retourner une commande
         // ou une liste de commande à éxécuter
@@ -91,7 +90,7 @@ class PolarDB {
         if (is_array($todo)) {
             $this->db->beginTransaction();
             foreach ($todo as $query) {
-                $this->db->exec($todo);
+                $this->db->exec($query);
             }
             $this->db->commit();
         }

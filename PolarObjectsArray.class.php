@@ -78,4 +78,8 @@ class PolarObjectsArray implements ArrayAccess, Countable, Iterator {
 
         return $result;
     }
+
+    public function to_json($attributes = NULL) {
+
+    }
 }

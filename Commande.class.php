@@ -5,13 +5,13 @@ require_once 'PolarObject.class.php';
 class Commande extends PolarObject {
     public static $table = 'polar_commandes';
     protected static $attrs = array(
-        'Type' => 'CommandeType',
-        'Nom' => T_STRING,
-        'Prenom' => T_STRING,
+        'Type' => 'TypeCommande',
+        'Nom' => T_STR,
+        'Prenom' => T_STR,
         'Mail' => T_STR,
         'Asso' => 'Asso',
         'DateCommande' => T_STR,
-        'IPCommande' => T_IP,
+        'IPCommande' => T_STR,
         'DatePaiement' => T_STR,
         'IDVente' => 'Vente',
         'DatePrete' => T_STR,
@@ -28,7 +28,14 @@ class Commande extends PolarObject {
         'DatePrete', 'IDPreparateur',
         'DateRetrait', 'IDRetrait',
         'DateRetour', 'IDRetour');
-    
+    private $details;
+
+    function __construct($data=NULL) {
+        parent::__construct($data);
+        $this->details = $this->db->fetchAll('ContenuCommande',
+                                             'IDCommande = '.$this->get_id());
+    }
+
     function set_payee($idvente) {
         $this->DatePaiement = 'NOW()';
         $this->IDVente = $idvente;
@@ -47,6 +54,20 @@ class Commande extends PolarObject {
     function set_retour($preparateur, $termine=1) {
         $this->IDRetour = $preparateur;
         $this->DateRetour = "NOW()";
+    }
+
+    function get_details() {
+        return $this->details;
+    }
+
+    function add_detail($type, $qte=NULL) {
+
+    }
+}
+
+class CommandeProjecteur extends Commande {
+    public function __construct($data=NULL, $db=NULL, $type='vp-etu') {
+
     }
 }
 ?>

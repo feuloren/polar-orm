@@ -80,18 +80,16 @@ On peut aussi définir des fonctions relatives à l'objet représenté
 */
 abstract class PolarObject implements PolarSaveable {
     private $id = NULL;
-    protected $db = NULL;
+    public static $db = NULL;
     protected static $attrs = array();
     protected static $nulls = array();
     protected $values;
     protected $modified;
     protected static $table;
 
-    public function __construct(array $data=NULL, $db=NULL) {
-        if ($db == NULL)
-            $this->db = new FakeDB();
-        else
-            $this->db = $db;
+    public function __construct(array $data=NULL) {
+        if ($this::$db == NULL)
+            throw new Exception("You must set PolarObject::$db to instanciate PolarObjects");
 
         if ($data === NULL or !isset($data['ID']))
             $this->__construct_from_data($data);
@@ -120,6 +118,8 @@ abstract class PolarObject implements PolarSaveable {
     Les objets liés sont automatiquement chargés
     */
     private function __construct_from_db(array $data) {
+        // On vérifie que les attributs nécessaires sont bien présent
+        // et on assigne les valeurs
         foreach ($this::$attrs as $key => $type) {
             if (!array_key_exists($key, $data))
                 throw new InvalidModel("Key '$key' expected but not present in the database");
@@ -129,19 +129,26 @@ abstract class PolarObject implements PolarSaveable {
                 $this->__set($key, $data[$key]);
             }
         }
-        $this->set_id((int) $data['ID']);
+
+        // On va ensuite ajouter les valeurs supplémentaires
+        // obtenus par jointure par exemple
+        #TODO
+
+        $this->id = (int) $data['ID'];
     }
 
     public function __get($attr) {
         if (!array_key_exists($attr, $this::$attrs))
             throw new InvalidAttribute($attr);
 
+        //additional values
+
         if (!array_key_exists($attr, $this->values))
             return NULL;
 
         if (type_is_object($this::$attrs[$attr]) and
             is_int($this->values[$attr])) {
-            $o = $this->db->fetchOne($this::$attrs[$attr],
+            $o = $this::$db->fetchOne($this::$attrs[$attr],
                                      $this->values[$attr]);
             $this->values[$attr] = $o;
         }
@@ -177,7 +184,7 @@ abstract class PolarObject implements PolarSaveable {
             if (is_object($value) and get_class($value) === $expected)
                 $this->values[$attr] = $value;
             else if (is_int($value)) {
-                if($this->db->validObject($expected, $value))
+                if($this::$db->validObject($expected, $value))
                     $this->values[$attr] = $value;
                 else
                     throw new InvalidValue('No object \''.$expected
@@ -197,10 +204,6 @@ abstract class PolarObject implements PolarSaveable {
         }
         if ($this->id !== NULL)
             $this->modified[$attr] = 1;
-    }
-
-    public function set_db(PolarDB $db) {
-        $this->db = $db;
     }
 
     public function get_id() {
@@ -275,6 +278,7 @@ abstract class PolarObject implements PolarSaveable {
       }
       return preg_replace($patterns, $replacements, $text);
     }
+
 }
 
 class FakeDB {

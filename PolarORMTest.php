@@ -4,6 +4,7 @@ require_once 'Utilisateur.class.php';
 require_once 'PolarDB.class.php';
 require_once 'Article.class.php';
 require_once 'Vente.class.php';
+require_once 'PolarAssociation.class.php';
 
 class TestObject extends PolarObject {
     public static $table = 'tests';
@@ -21,6 +22,7 @@ class PolarORMTest extends PHPUnit_Framework_TestCase
 {
     public function setUp() {
         $this->db = new PolarDB("localhost", "polar", "root", "root");
+        PolarObject::$db = $this->db;
     }
 
     public function testTypeDetection() {
@@ -71,35 +73,39 @@ class PolarORMTest extends PHPUnit_Framework_TestCase
         $o->Liste = "x";
     }
 
-    public function testDroitsPage()
+    /*
+    public function testAssociation()
     {
-        $page = 1;
-        $droits = new DroitsPage(NULL, NULL);
-        $this->assertEquals(NULL, $droits->id);
-        $droits->set_id($page);
-        $this->assertEquals($page, $droits->id);
-        $droits->set_id($page+1);
-        $this->assertEquals($page, $droits->id);
-        $this->assertEmpty($droits->droits);
-        $this->assertEmpty($droits->to_remove);
-        $this->assertEmpty($droits->to_add);
-        $droits->add(3);
-        $droits->add(4);
-        $result = $droits->save();
+        $id = 1;
+        $start = 'ID';
+        $dest = 'Other';
+        $as = new PolarAssociation('polar_nothing', 'TestObject', );
+        $this->assertEquals(NULL, $as->get_id());
+        $as->set_id($page);
+        $this->assertEquals($page, $as->id);
+        $as->set_id($page+1);
+        $this->assertEquals($page, $as->id);
+        $this->assertEmpty($as->list);
+        $this->assertEmpty($as->to_remove);
+        $this->assertEmpty($as->to_add);
+        $as->add(3);
+        $as->add(4);
+        $result = $as->save();
         $this->assertEquals($result[0], "INSERT INTO polar_securite_droits VALUES ($page,3),($page,4)");
-        $this->assertEquals(array(3,4), $droits->droits);
-        $this->assertEmpty($droits->to_remove);
-        $this->assertEmpty($droits->to_add);
-        $droits->add(4);
-        $droits->remove(3);
-        $result = $droits->save();
+        $this->assertEquals(array(3,4), $as->list);
+        $this->assertEmpty($as->to_remove);
+        $this->assertEmpty($as->to_add);
+        $as->add(4);
+        $as->remove(3);
+        $result = $as->save();
         $this->assertCount(1, $result);
         $this->assertEquals($result[0], "DELETE FROM polar_securite_droits WHERE ID=$page AND (User=3)");
-        $this->assertEmpty(array_diff(array(4), $droits->droits));
-        $this->assertEmpty($droits->to_remove);
-        $this->assertEmpty($droits->to_add);
-        $this->assertEmpty($droits->get_necessaires());
+        $this->assertEmpty(array_diff(array(4), $as->list));
+        $this->assertEmpty($as->to_remove);
+        $this->assertEmpty($as->to_add);
+        $this->assertEmpty($as->get_necessaires());
     }
+*/
 
     public function testUtilisateur() {
         $u = new Utilisateur(array('Nom' => 'Thévenet'));
@@ -213,7 +219,7 @@ class PolarORMTest extends PHPUnit_Framework_TestCase
 
     /**
      * @depends testLoadFromDB
-     * @depends testDroitsPage
+     * @depends testAssociation
      */
     public function testPage() {
         $membres = $this->db->fetchOne('Page', 7);

@@ -47,16 +47,24 @@ class PolarDB {
         return $this->fetchAll($type, $query, 1)[0];
     }
 
-    public function fetchAll($type, $query='1', $limit=NULL) {
-        $req = "SELECT * FROM ".$type::$table." WHERE $query";
+    public function fetchAll($type, $query='1', $limit=NULL, $lazy=false) {
+        if ($lazy)
+            $req = "SELECT ID";
+        else
+            $req = "SELECT *";
+        $req .= " FROM ".$type::$table." WHERE $query";
         if ($limit != NULL) $req.= " LIMIT $limit";
 
         $result = $this->query($req);
 
-        $objects = new PolarObjectsArray();
+        $objects = new PolarObjectsArray($type, $lazy);
         foreach ($result as $ligne) {
-            $obj = new $type($ligne);
-            $objects[] = $obj;
+            if ($lazy)
+                $objects[] = intval($ligne['ID']);
+            else {
+                $obj = new $type($ligne);
+                $objects[] = $obj;
+            }
             //$this->objects_store[$type][$] = $obj;
         }
 

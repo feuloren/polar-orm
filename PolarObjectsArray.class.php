@@ -12,21 +12,39 @@ class InvalidMethod extends Exception { }
  *  La méthode sera appelée sur tous les objets stockés avec les paramètres
  *  passés
  */
-class PolarObjectsArray implements ArrayAccess, Countable, Iterator {
+class PolarObjectsArray implements PolarSaveable, ArrayAccess, Countable, Iterator {
     private $objs;
     private $position;
+    private $type;
+    public static $db;
 
-    public function __construct() {
+    public function __construct($type, $lazy=false) {
         $this->objs = array();
         $this->position = 0;
+        $this->type = $type;
+        $this->lazy = $lazy;
     }
 
+    // Implémentation de PolarSaveable
+    function get_necessaires() {
+        return array();
+    }
+
+    function save() {
+        return ";";
+    }
+
+    function get_dependants() {
+        return $this->objs;
+    }
+
+    // Implémentation de ArrayAccess, Coutable et Iterable
     function rewind() {
         $this->position = 0;
     }
 
     function current() {
-        return $this->objs[$this->position];
+        return $this->getObj($this->position);
     }
 
     function key() {
@@ -42,6 +60,10 @@ class PolarObjectsArray implements ArrayAccess, Countable, Iterator {
     }
 
     public function offsetSet($offset, $value) {
+        if (!($value instanceof $this->type or is_int($value))) {
+            throw new InvalidValue("Object must a ".$this->type);
+        }
+
         if (is_null($offset))
             $this->objs[] = $value;
         else
@@ -57,13 +79,33 @@ class PolarObjectsArray implements ArrayAccess, Countable, Iterator {
     }
 
     public function offsetGet($offset) {
-        return isset($this->objs[$offset]) ? $this->objs[$offset] : null;
+        return isset($this->objs[$offset]) ? $this->getObj($offset) : null;
     }
     
     public function count() {
         return count($this->objs);
     }
 
+    private function getObj($offset) {
+        if (!isset($this->objs[$offset]))
+            return null;
+
+        $o = $this->objs[$offset];
+        if (is_int($o)) {
+            $new_o = $this::$db->fetchOne($this->type, $o);
+            $this->objs[$offset] = $new_o;
+            return $new_o;
+        } else {
+            return $o;
+        }
+                
+    }
+
+    /**
+     * __call
+     * Appelle la méthode demandée sur tous les objets de l'array
+     *   et renvoie les réponses dans un tableau
+     */
     public function __call($func, $args) {
         if (count($this->objs) == 0)
             return array();

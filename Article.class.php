@@ -13,7 +13,7 @@ class Article extends PolarObject {
         "PrixAchat" => T_FLOAT,
         "PrixVente" => T_FLOAT,
         "PrixVenteAsso" => T_FLOAT,
-        "TVA" => T_FLOAT, #TODO différencier tva achat et vente (ex bouquins)
+        "TVA" => T_FLOAT,
         "Palier1" => T_INT,
         "Remise1" => T_FLOAT,
         "Palier2" => T_INT,

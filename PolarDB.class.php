@@ -44,7 +44,7 @@ class PolarDB {
         if (intval($query) !== 0)
             $query = "ID=$query";
         // On récupère le 1 er élément
-        return $this->fetchAll($type, $query, 1)[0];
+        return $this->fetchAll($type, $query, 1)->current();
     }
 
     public function fetchAll($type, $query='1', $limit=NULL, $lazy=false) {

@@ -83,6 +83,7 @@ abstract class PolarObject implements PolarSaveable {
     public static $db = NULL;
     protected static $attrs = array();
     protected static $nulls = array();
+    protected static $primary_key = 'ID';
     protected $values;
     protected $modified;
     protected $additional_values;
@@ -148,12 +149,13 @@ abstract class PolarObject implements PolarSaveable {
             unset($data[$key]);
         }
         $this->additional_values = $data;
+        unset($this->additional_values[$this::$primary_key]);
 
         // On va ensuite ajouter les valeurs supplémentaires
         // obtenus par jointure par exemple
         //TODO
 
-        $this->id = (int) $data['ID'];
+        $this->id = (int) $data[$this::$primary_key];
     }
 
     public function __get($attr) {
@@ -260,7 +262,7 @@ abstract class PolarObject implements PolarSaveable {
             return ";";
 
         $q = $this::$db->create_update_query(get_class($this));
-        $q->where('ID=?', (int)$this->id);
+        $q->where($this::$primary_key.'=?', (int)$this->id);
         foreach ($this->modified as $attr => $thing) {
             $q->set_value($attr, format_attr($this->values[$attr]));
         }
@@ -278,19 +280,15 @@ abstract class PolarObject implements PolarSaveable {
         $values = array();
         $q = $this::$db->create_insert_query(get_class($this));
         foreach ($this::$attrs as $key => $value) {
-            //$fields[] = $key;
-            //$values[] = format_attr($this->values[$key]);
             $q->set_value($key, format_attr($this->values[$key]));
         }
-        //$values = implode($values, ',');
-        //$fields = implode($fields, ',');
-        //$r = 'INSERT INTO '.$this::$table.' ('.$fields.') VALUES ('.$values.')';
+
         return $q->get_sql();
     }
 
     public function delete() {
         if ($this->id != NULL)
-            $this::$db->create_delete_query(get_class($this))->where('ID=?', $this->id)->rawExecute();
+            $this::$db->create_delete_query(get_class($this))->where($this::$primary_key.'=?', $this->id)->rawExecute();
     }
 
     /**

@@ -72,6 +72,12 @@ class PolarDB {
         return $this->create_query(QUERY_DELETE, $class);
     }
 
+    /* create_update_query
+     */
+    public function create_update_query($class) {
+        return $this->create_query(QUERY_UPDATE, $class);
+    }
+
     public function fetchOne($type, $query) {
         // if(in_array($this->objects_store, $query)) ...
         // Si la requête est un entier, on considère que c'est l'ID de l'objet

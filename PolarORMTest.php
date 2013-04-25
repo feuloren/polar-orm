@@ -195,7 +195,7 @@ class PolarORMTest extends PHPUnit_Framework_TestCase
         $this->assertEquals("f", $u->Sexe);
         $u->Staff = False;
         $this->assertFalse($u->Staff);
-        $this->assertEquals("UPDATE polar_utilisateurs SET  `Nom`=\"Moimoi\", `Sexe`=\"f\", `Staff`=0 WHERE ID=913",
+        $this->assertEquals("UPDATE polar_utilisateurs pu SET `Nom`=\"Moimoi\", `Sexe`=\"f\", `Staff`=0 WHERE ID=913",
             $u->save());
         $this->assertEquals(";", $u->save());
 
@@ -283,7 +283,7 @@ class PolarORMTest extends PHPUnit_Framework_TestCase
      */
     public function testIncrementalSave($u) {
         $u->Telephone = "0663469246";
-        $this->assertEquals("UPDATE polar_utilisateurs SET  `Telephone`=\"0663469246\" WHERE ID=".$u->get_id(), $u->save());
+        $this->assertEquals("UPDATE polar_utilisateurs pu SET `Telephone`=\"0663469246\" WHERE ID=".$u->get_id(), $u->save());
         $this->assertEquals(";", $u->save());
         return $u;
     }

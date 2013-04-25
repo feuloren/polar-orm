@@ -242,14 +242,21 @@ class PolarQuery {
         return str_replace(array('%table%',
                                  '%sets%',
                                  '%wheres%'),
-                           array($class::$table .' '. key($this->table),
+                           array($class::$table .' '. key($this->tables),
                                  $this->format_sets(),
                                  $this->format_wheres()),
                            $req);
     }
 
     public function format_sets() {
-        return '';
+        if (count($this->fields) != count($this->values))
+            throw new WrongValuesNumber('Use set_value !!!');
+
+        $sets = '';
+        foreach($this->fields as $index => $field) {
+            $sets .= '`'.$field . '`='.$this->values[$index].', ';
+        }
+        return substr($sets, 0, -2);
     }
 
     // Delete

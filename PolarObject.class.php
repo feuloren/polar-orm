@@ -259,17 +259,15 @@ abstract class PolarObject implements PolarSaveable {
         if (empty($this->modified))
             return ";";
 
-        $query = 'UPDATE '.$this::$table.' SET ';
+        $q = $this::$db->create_update_query(get_class($this));
+        $q->where('ID=?', (int)$this->id);
         foreach ($this->modified as $attr => $thing) {
-            $value = $this->values[$attr];
-            $query .= " `$attr`=".format_attr($value).",";
+            $q->set_value($attr, format_attr($this->values[$attr]));
         }
-        $query = substr($query, 0, -1);
-        $query .= ' WHERE ID='.$this->id;
 
         $this->modified = array();
 
-        return $query;
+        return $q->get_sql();
     }
 
     private function initial_insert() {

@@ -283,14 +283,31 @@ class PolarQuery {
                            $req);
     }
 
-    // Exéctution de la requête
+    /* execute
+     * Exécute la requête crée
+     * Retourne un objet $class correctement hydraté
+     * Ou un PolarObjectsArray contenant tous les objets
+     * retournés par la requête
+     */
     public function execute() {
         $data = $this->db->query($this->get_sql());
-        $obj = new $this->class(false);
-        $obj->hydrate($data->fetch());
-        return $obj;
+
+        $objects = new PolarObjectsArray($this->class);
+        foreach ($data as $ligne) {
+            $obj = new $this->class(false);
+            $obj->hydrate($ligne);
+            $objects[] = $obj;
+        }
+        if (count($objects) == 1)
+            return $objects[0];
+        else
+            return $objects;
     }
 
+    /* rawExecute
+     * Execute la requête crée
+     * Retourne l'objet PDOStatement résulant sans traitement
+     */
     public function rawExecute() {
         return $this->db->query($this->get_sql());
     }

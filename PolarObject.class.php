@@ -85,39 +85,56 @@ abstract class PolarObject implements PolarSaveable {
     protected static $nulls = array();
     protected $values;
     protected $modified;
+    protected $additional_values;
     protected static $table;
 
-    public function __construct(array $data=NULL) {
-        if ($this::$db == NULL)
-            throw new Exception("You must set PolarObject::$db to instanciate PolarObjects");
-
-        if ($data === NULL or !isset($data['ID']))
-            $this->__construct_from_data($data);
-        else
-            $this->__construct_from_db($data);
-    }
 
     /*
-    Crée un nouvel objet à partir d'un tableau clé => valeur
-    La validité des clés et des valeurs est vérifiée et une exception sera renvoyé
-     en cas de problème.
-    L'identifiant de l'objet est NULL, il faut sauvegarder l'objet en utilisant
-     PolarDB::save pour l'enregistrer et lui attribuer un ID
+      Crée un nouvel objet à partir d'un tableau clé => valeur
+      La validité des clés et des valeurs est vérifiée et une exception sera renvoyé
+      en cas de problème.
+      L'identifiant de l'objet est NULL, il faut sauvegarder l'objet en utilisant
+      PolarDB::save pour l'enregistrer et lui attribuer un ID
     */
-    private function __construct_from_data(array $data) {
-        $this->values = array();
-        if ($data !== NULL) {
-            foreach ($data as $key => $value) {
-                $this->__set($key, $value);
+    public function __construct($data=array()) {
+        if ($this::$db === NULL)
+            throw new Exception("You must set PolarObject::$db to instanciate PolarObjects");
+
+        // Spécial pour le chargement depuis la db, permet d'éviter
+        // une boucle en plus
+        if ($data == false)
+            return;
+
+        foreach ($this::$attrs as $key => $type) {
+            if (array_key_exists($key, $data)) {
+                if (type_is_object($type) and $data[$key] !== NULL and !($data[$key] instanceof $type)) {
+                    $this->__set($key, intval($data[$key]));
+                } else {
+                    $this->__set($key, $data[$key]);
+                }
+            } else {
+                // On met une valeur par défaut
+                if (in_array($key, $this::$nulls)) {
+                    $this->values[$key] = NULL;
+                } else {
+                    if ($type == T_STR)
+                        $this->values[$key] = '';
+                    else if($type == T_BOOL)
+                        $this->values[$key] = false;
+                    else if(is_array($type))
+                        $this->values[$key] = $type[0];
+                    else // int, float, objects
+                        $this->values[$key] = 0;
+                }
             }
         }
     }
 
     /*
-    Crée un nouvel objet à partir de la base de donnée
-    Les objets liés sont automatiquement chargés
+    Remplie les attributs à partir d'une ligne de la base de donnée
+    Les objets liés ne sont pas automatiquement chargés
     */
-    private function __construct_from_db(array $data) {
+    public function hydrate(array $data) {
         // On vérifie que les attributs nécessaires sont bien présent
         // et on assigne les valeurs
         foreach ($this::$attrs as $key => $type) {
@@ -128,18 +145,24 @@ abstract class PolarObject implements PolarSaveable {
             } else {
                 $this->__set($key, $data[$key]);
             }
+            unset($data[$key]);
         }
+        $this->additional_values = $data;
 
         // On va ensuite ajouter les valeurs supplémentaires
         // obtenus par jointure par exemple
-        #TODO
+        //TODO
 
         $this->id = (int) $data['ID'];
     }
 
     public function __get($attr) {
-        if (!array_key_exists($attr, $this::$attrs))
-            throw new InvalidAttribute($attr);
+        if (!array_key_exists($attr, $this::$attrs)) {
+            if (array_key_exists($attr, $this->additional_values))
+                return $this->additional_values[$attr];
+            else
+                throw new InvalidAttribute($attr);
+        }
 
         //additional values
 
@@ -255,14 +278,21 @@ abstract class PolarObject implements PolarSaveable {
 
         $fields = array();
         $values = array();
+        $q = $this::$db->create_insert_query(get_class($this));
         foreach ($this::$attrs as $key => $value) {
-            $fields[] = $key;
-            $values[] = format_attr($this->values[$key]);
+            //$fields[] = $key;
+            //$values[] = format_attr($this->values[$key]);
+            $q->set_value($key, format_attr($this->values[$key]));
         }
-        $values = implode($values, ',');
-        $fields = implode($fields, ',');
-        $r = 'INSERT INTO '.$this::$table.' ('.$fields.') VALUES ('.$values.')';
-        return $r;
+        //$values = implode($values, ',');
+        //$fields = implode($fields, ',');
+        //$r = 'INSERT INTO '.$this::$table.' ('.$fields.') VALUES ('.$values.')';
+        return $q->get_sql();
+    }
+
+    public function delete() {
+        if ($this->id != NULL)
+            $this::$db->create_delete_query(get_class($this))->where('ID=?', $this->id)->rawExecute();
     }
 
     /**
@@ -274,7 +304,7 @@ abstract class PolarObject implements PolarSaveable {
       $replacements = array();
       foreach ($this::$attrs as $key => $type) {
         $patterns[] = "/\{\{$key\}\}/";
-        $replacements[] = $this->__get($key);
+        $replacements[] = $this->values[$key];
       }
       return preg_replace($patterns, $replacements, $text);
     }

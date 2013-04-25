@@ -2,6 +2,7 @@
 
 require_once 'PolarObject.class.php';
 require_once 'PolarObjectsArray.class.php';
+require_once 'PolarQuery.class.php';
 
 class PolarDB {
     private $db;
@@ -16,17 +17,24 @@ class PolarDB {
         //try {
             $this->db = new PDO($dsn, $user, $pass,
                                 array(PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8"));
+            $this->db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         //} catch (PDOException $e) {
             //echo 'Connexion échouée : ' . $e->getMessage();
         //}
     }
 
+    /* save
+     * save one or multiple objects
+     */
     public function save() {
         $this->saving = array();
         call_user_func_array(array($this, 'iter_save'), func_get_args());
         $this->saving = array();
     }
 
+    /* iter_save
+     * recursively get and save objets from the initial objects list
+     */
     private function iter_save() {
         foreach (func_get_args() as $obj) {
             if ($obj instanceof PolarSaveable && !(in_array($obj, $this->saving))) {
@@ -36,6 +44,32 @@ class PolarDB {
                 call_user_func_array(array($this, 'iter_save'), $obj->get_dependants());
             }
         }
+    }
+
+    /* create_query
+     * return a PolarQuery with the right $db reference
+     * supported types are QUERY_INSERT, QUERY_SELECT, QUERY_UPDATE, QUERY_SELECT
+     */
+    public function create_query($type, $class) {
+        return new PolarQuery($this, $type, $class);
+    }
+
+    /* create_insert_query
+     */
+    public function create_insert_query($class) {
+        return $this->create_query(QUERY_INSERT, $class);
+    }
+
+    /* create_select_query
+     */
+    public function create_select_query($class) {
+        return $this->create_query(QUERY_SELECT, $class)->select("$class.*");
+    }
+
+    /* create_delete_query
+     */
+    public function create_delete_query($class) {
+        return $this->create_query(QUERY_DELETE, $class);
     }
 
     public function fetchOne($type, $query) {
@@ -62,7 +96,8 @@ class PolarDB {
             if ($lazy)
                 $objects[] = intval($ligne['ID']);
             else {
-                $obj = new $type($ligne);
+                $obj = new $type(false);
+                $obj->hydrate($ligne);
                 $objects[] = $obj;
             }
             //$this->objects_store[$type][$] = $obj;
@@ -71,10 +106,11 @@ class PolarDB {
         return $objects;
     }
 
+    /* validObject
+     * Returns true if the row pointed by id 
+     */
     public function validObject($type, $id) {
-        $r = $this->query('SELECT COUNT(*) FROM '.
-                          $type::$table.
-                          ' WHERE ID='.$id);
+        $r = $this->create_select_query($type)->select('COUNT(*)', 'C')->where('ID=?', $id)->rawExecute();
 
         return $r->fetchColumn() > 0;
     }
@@ -86,8 +122,7 @@ class PolarDB {
     public function delete() {
         foreach (func_get_args() as $obj) {
           if ($obj instanceof PolarObject and !is_null($obj->get_id())) {
-              $this->db->exec('DELETE FROM '.$obj::$table.
-                              ' WHERE ID='.$obj->get_id());
+              $obj->delete();
             }
         }
     }

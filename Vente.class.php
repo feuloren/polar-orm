@@ -24,28 +24,26 @@ class Vente extends PolarObject {
     public function __construct($article, $qte=1, $paiement='cb', $permanencier='2',
                                 $tarif='normal', $asso=NULL, $client='',
                                 $idvente=NULL) {
-        if (is_array($article)) {
-            parent::__construct($article);
-        }
-        else {
-            if ($idvente==NULL) $idvente = self::generate_idvente();
+        if ($article == false)
+            return;
 
-            if ($qte <= 0)
-                throw new InvalidValue('Quantite <= 0');
+        if ($idvente==NULL) $idvente = self::generate_idvente();
 
-            $attrs = array('IDVente' => $idvente,
-                           'Article' => $article,
-                           'Date' => 'NOW()',
-                           'Finalise' => 0,
-                           'Asso' => $asso,
-                           'Client' => $client,
-                           'Facture' => 0, #TODO
-                           'Tarif' => $tarif,
-                           'MoyenPaiement' => $paiement,
-                           'Quantite' => $qte,
-                           'Permanencier' => $permanencier);
-            parent::__construct($attrs);
-        }
+        if ($qte <= 0)
+            throw new InvalidValue('Quantite <= 0');
+
+        $attrs = array('IDVente' => $idvente,
+                       'Article' => $article,
+                       'Date' => 'NOW()',
+                       'Finalise' => 0,
+                       'Asso' => $asso,
+                       'Client' => $client,
+                       'Facture' => 0, //TODO
+                       'Tarif' => $tarif,
+                       'MoyenPaiement' => $paiement,
+                       'Quantite' => $qte,
+                       'Permanencier' => $permanencier);
+        parent::__construct($attrs);
     }
 
     public function __set($attr, $value) {

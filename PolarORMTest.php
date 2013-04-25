@@ -73,6 +73,33 @@ class PolarORMTest extends PHPUnit_Framework_TestCase
         $o->Liste = "x";
     }
 
+    public function testMakeAlias() {
+        $this->assertEquals('t', make_alias('tests'));
+        $this->assertEquals('pca', make_alias('polar_caisse_articles'));
+        $this->assertEquals('pcvg', make_alias('polar_caisse_ventes_global'));
+    }
+
+    public function testPolarQuerySelect() {
+        $q = new PolarQuery($this->db, QUERY_SELECT, 'TestObject');
+        
+        $this->assertEquals('t.*', $q->format_selects());
+        $this->assertEquals($q, $q->select('t.ID'));
+        $this->assertEquals('t.ID', $q->format_selects());
+        $q->select('Nom');
+        $this->assertEquals('t.ID, Nom', $q->format_selects());
+
+        $this->assertEquals('1', $q->format_wheres());
+        $this->assertEquals($q, $q->where('t.ID = 3'));
+        $this->assertEquals('t.ID = 3', $q->format_wheres());
+        $q->where('t.Texte = \'THEVENET\'');
+        $this->assertEquals('t.ID = 3 AND t.Texte = \'THEVENET\'', $q->format_wheres());
+        $q->wheres = array(); // reset_wheres()
+        $q->where('t.ID = ?', 4);
+        $this->assertEquals('t.ID = 4', $q->format_wheres());
+        $q->where('t.Texte = ?', 'Florent');
+        $this->assertEquals('t.ID = 4 AND t.Texte = "Florent"', $q->format_wheres());
+    }
+
     /*
     public function testAssociation()
     {

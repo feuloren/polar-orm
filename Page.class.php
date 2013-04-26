@@ -19,7 +19,7 @@ class Page extends PolarObject {
     
     public function __construct($data=NULL) {
         parent::__construct($data);
-        $this->droits = new DroitsPage($this::$db, $this->get_id());
+        //$this->droits = new DroitsPage($this::$db, $this->get_id());
     }
     
     public function add_authorisation($user) {

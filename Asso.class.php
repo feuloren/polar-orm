@@ -21,7 +21,7 @@ class Asso extends PolarObject {
     protected static $nulls = array(
         'MailPresident', 'TelPresident',
         'MailTresorier', 'TelTresorier');
-    
+
     public function sendMail($from, $from_nom, $sujet, $html, $pj=array()) {
         $recipients = array($this->MailAsso);
         if ($this->MailTresorier !== NULL)

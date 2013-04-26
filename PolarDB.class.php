@@ -8,6 +8,7 @@ class PolarDB {
     private $db;
     private $select_req;
     private $objects_store;
+    private $nb_query = 0;
 
     public function __construct($server, $base, $user, $pass) {
             /* Connexion à une base ODBC avec l'invocation de pilote */
@@ -63,7 +64,7 @@ class PolarDB {
     /* create_select_query
      */
     public function q_select($class) {
-        return $this->create_query(QUERY_SELECT, $class)->select("$class.*");
+        return $this->create_query(QUERY_SELECT, $class);
     }
 
     /* create_delete_query
@@ -138,9 +139,14 @@ class PolarDB {
         }
     }
 
+    public function get_nb_queries() {
+        return $this->nb_query;
+    }
+
     // Access underlying PDO methods
 
     public function query($query) {
+        $this->nb_query++;
         return $this->db->query($query);
     }
 

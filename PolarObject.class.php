@@ -325,6 +325,16 @@ abstract class PolarObject implements PolarSaveable {
     public static function update() {
         return static::$db->q_update(get_called_class());
     }
+
+    /* select
+     * Returns a PolarQuery set up with the current class in select mode
+     */
+    public static function select($what=NULL, $alias=NULL) {
+        $q = static::$db->q_select(get_called_class());
+        if ($what != NULL)
+            $q->select($what, $alias);
+        return $q;
+    }
 }
 
 class FakeDB {

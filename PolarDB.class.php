@@ -40,7 +40,7 @@ class PolarDB {
             if ($obj instanceof PolarSaveable && !(in_array($obj, $this->saving))) {
                 $this->saving[] = $obj;
                 call_user_func_array(array($this, 'iter_save'), $obj->get_necessaires());
-                $this->do_save($obj);
+                $obj->save();
                 call_user_func_array(array($this, 'iter_save'), $obj->get_dependants());
             }
         }
@@ -56,28 +56,31 @@ class PolarDB {
 
     /* create_insert_query
      */
-    public function create_insert_query($class) {
+    public function q_insert($class) {
         return $this->create_query(QUERY_INSERT, $class);
     }
 
     /* create_select_query
      */
-    public function create_select_query($class) {
+    public function q_select($class) {
         return $this->create_query(QUERY_SELECT, $class)->select("$class.*");
     }
 
     /* create_delete_query
      */
-    public function create_delete_query($class) {
+    public function q_delete($class) {
         return $this->create_query(QUERY_DELETE, $class);
     }
 
     /* create_update_query
      */
-    public function create_update_query($class) {
+    public function q_update($class) {
         return $this->create_query(QUERY_UPDATE, $class);
     }
 
+    /* fetchOne
+     * DEPRECATED
+     */
     public function fetchOne($type, $query) {
         // if(in_array($this->objects_store, $query)) ...
         // Si la requête est un entier, on considère que c'est l'ID de l'objet
@@ -87,6 +90,9 @@ class PolarDB {
         return $this->fetchAll($type, $query, 1)->current();
     }
 
+    /* fetchAll
+     * DEPRECATED
+     */
     public function fetchAll($type, $query='1', $limit=NULL, $lazy=false) {
         if ($lazy)
             $req = "SELECT ID";
@@ -116,15 +122,14 @@ class PolarDB {
      * Returns true if the row pointed by id 
      */
     public function validObject($type, $id) {
-        $r = $this->create_select_query($type)->select('COUNT(*)', 'C')->where('ID=?', $id)->rawExecute();
+        $r = $this->q_select($type)->select('COUNT(*)')->where('ID=?', $id)->rawExecute();
 
         return $r->fetchColumn() > 0;
     }
 
-    public function query($query) {
-        return $this->db->query($query);
-    }
-
+    /* delete
+     * delete all the objects passed
+     */
     public function delete() {
         foreach (func_get_args() as $obj) {
           if ($obj instanceof PolarObject and !is_null($obj->get_id())) {
@@ -133,31 +138,30 @@ class PolarDB {
         }
     }
 
-    ### Private functions
+    // Access underlying PDO methods
 
-    private function do_save($obj) {
-        $todo = $obj->save();
+    public function query($query) {
+        return $this->db->query($query);
+    }
 
-        // La méthode save peut retourner une commande
-        // ou une liste de commande à éxécuter
-        // Si on n'a qu'une seule commande et que l'objet n'est pas encore
-        // sauvegardé, on donne le dernier id généré par mysql à l'objet
+    public function lastInsertId() {
+        return $this->db->lastInsertId();
+    }
 
-        if (is_array($todo)) {
-            $this->db->beginTransaction();
-            foreach ($todo as $query) {
-                $this->db->exec($query);
-            }
-            $this->db->commit();
-        }
-        else {
-            $this->db->exec($todo);
-            if ($obj instanceof PolarObject and $obj->get_id() === NULL) {
-                $new_id = $this->db->lastInsertId();
-                $obj->set_id($new_id);
-                //$this->objects_store[get_class($obj)][$new_id] = $obj;
-            }
-        }
+    public function beginTransaction() {
+        $this->db->beginTransaction();
+    }
+
+    public function commit() {
+        $this->db->commit();
+    }
+
+    public function rollBack() {
+        $this->db->rollBack();
+    }
+
+    public function inTransaction() {
+        return $this->db->inTransaction();
     }
 }
 ?>

@@ -258,18 +258,17 @@ abstract class PolarObject implements PolarSaveable {
         if ($this->id === NULL)
             return $this->initial_insert();
 
-        if (empty($this->modified))
-            return ";";
+        if (!empty($this->modified)) {
+            $q = $this::$db->q_update(get_class($this));
+            $q->where($this::$primary_key.'=?', (int)$this->id);
 
-        $q = $this::$db->create_update_query(get_class($this));
-        $q->where($this::$primary_key.'=?', (int)$this->id);
-        foreach ($this->modified as $attr => $thing) {
-            $q->set_value($attr, format_attr($this->values[$attr]));
+            foreach ($this->modified as $attr => $thing) {
+                $q->set_value($attr, format_attr($this->values[$attr]));
+            }
+
+            $q->rawExecute();
+            $this->modified = array();
         }
-
-        $this->modified = array();
-
-        return $q->get_sql();
     }
 
     private function initial_insert() {
@@ -278,17 +277,18 @@ abstract class PolarObject implements PolarSaveable {
 
         $fields = array();
         $values = array();
-        $q = $this::$db->create_insert_query(get_class($this));
+        $q = $this::$db->q_insert(get_class($this));
         foreach ($this::$attrs as $key => $value) {
             $q->set_value($key, format_attr($this->values[$key]));
         }
 
-        return $q->get_sql();
+        $q->rawExecute();
+        $this->set_id($this::$db->lastInsertId());
     }
 
     public function delete() {
         if ($this->id != NULL)
-            $this::$db->create_delete_query(get_class($this))->where($this::$primary_key.'=?', $this->id)->rawExecute();
+            $this::$db->q_delete(get_class($this))->where($this::$primary_key.'=?', $this->id)->rawExecute();
     }
 
     /**
@@ -305,6 +305,26 @@ abstract class PolarObject implements PolarSaveable {
       return preg_replace($patterns, $replacements, $text);
     }
 
+    /* getById
+     * Returns the object pointed by $id
+     * or null if is is invalid.
+     */
+    public static function getById($id) {
+        $class = get_called_class(); // Late static Binding :-)
+        return PolarObject::$db->q_select($class)
+                               ->where($class::$primary_key.'=?', $id)
+                               ->execute();
+    }
+
+    /* update
+     * Returns a PolarQuery set up with the current class in update mode
+     * Use it to update attributes without having to load the whole object
+     * CAREFUL : you have to call format_attr on the new value before pasing
+     *  it to set_value().
+     */
+    public static function update() {
+        return static::$db->q_update(get_called_class());
+    }
 }
 
 class FakeDB {

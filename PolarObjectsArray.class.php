@@ -16,7 +16,6 @@ class PolarObjectsArray implements PolarSaveable, ArrayAccess, Countable, Iterat
     private $objs;
     private $position;
     private $type;
-    public static $db;
 
     public function __construct($type, $lazy=false) {
         $this->objs = array();
@@ -92,7 +91,8 @@ class PolarObjectsArray implements PolarSaveable, ArrayAccess, Countable, Iterat
 
         $o = $this->objs[$offset];
         if (is_int($o)) {
-            $new_o = $this::$db->fetchOne($this->type, $o);
+            $class = $this->type;
+            $new_o = $class::getById($o);
             $this->objs[$offset] = $new_o;
             return $new_o;
         } else {

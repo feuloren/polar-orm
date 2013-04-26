@@ -292,6 +292,9 @@ class PolarQuery {
     public function execute() {
         $data = $this->db->query($this->get_sql());
 
+        if ($this->type != QUERY_SELECT)
+            return $data;
+
         $objects = new PolarObjectsArray($this->class);
         foreach ($data as $ligne) {
             $obj = new $this->class(false);

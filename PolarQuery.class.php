@@ -73,10 +73,10 @@ class PolarQuery {
     }
 
     public function order($ordre) {
-        if ($this->type != SELECT_QUERY)
+        if ($this->type != QUERY_SELECT)
             throw new InvalidQueryType();
 
-        $this->orders[] = $order;
+        $this->orders[] = $ordre;
 
         return $this;
     }
@@ -85,7 +85,7 @@ class PolarQuery {
      * Ajoute une colonne de regroupement
      */
     public function groupBy($group) {
-        if ($this->type != SELECT_QUERY)
+        if ($this->type != QUERY_SELECT)
             throw new InvalidQueryType();
 
         $this->groups[] = $group;
@@ -193,14 +193,14 @@ class PolarQuery {
         if (empty($this->orders))
             return '';
         else
-            return 'ORDER BY' . implode(',', $this->orders);
+            return ' ORDER BY ' . implode(',', $this->orders);
     }
 
     public function format_groups() {
         if (empty($this->groups))
             return '';
         else
-            return 'GROUP BY' . implode(',', $this->groups);
+            return ' GROUP BY ' . implode(',', $this->groups);
     }
 
     public function format_limit() {
@@ -208,9 +208,9 @@ class PolarQuery {
             return '';
         } else {
             if ($this->offset == NULL) {
-                return 'LIMIT '.$this->limit;
+                return ' LIMIT '.$this->limit;
             } else {
-                return 'LIMIT '.$this->offset.','.$this->limit;
+                return ' LIMIT '.$this->offset.','.$this->limit;
             }
         }
     }

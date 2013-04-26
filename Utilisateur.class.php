@@ -32,7 +32,7 @@ class Utilisateur extends PolarObject {
             return false;
         }
         // on vérifie si l'utilisateur avec ce login existe déjà
-        if (Utilisateur::$db->query("SELECT COUNT(*) FROM polar_utilisateurs WHERE Login LIKE '$login'")->fetchColum() == 0) {
+        //if (Utilisateur::$db->query("SELECT COUNT(*) FROM polar_utilisateurs WHERE Login LIKE '$login'")->fetchColum() == 0) {
             // On crée un nouvel Utilisateur avec les valeurs
             // par défaut et celles obtenues depuis ginger
             return new Utilisateur(array('IPClient' => get_ip(),
@@ -44,9 +44,9 @@ class Utilisateur extends PolarObject {
                                          'Nom' => $user->nom,
                                          'Prenom' => $user->prenom,
                                          'Newsletter' => 1));
-        } else {
-            return false;
-        }
+            //} else {
+            //return false;
+            //}
     }
 
     public function send_mail($from, $from_nom, $sujet, $html, $pj=array()) {

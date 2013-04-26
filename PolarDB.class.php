@@ -124,8 +124,10 @@ class PolarDB {
      */
     public function validObject($type, $id) {
         $r = $this->q_select($type)->select('COUNT(*)')->where('ID=?', $id)->rawExecute();
-
-        return $r->fetchColumn() > 0;
+        
+        $b = $r->fetchColumn() > 0;
+        $r->closeCursor();
+        return $b;
     }
 
     /* delete

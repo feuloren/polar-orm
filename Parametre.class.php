@@ -14,6 +14,7 @@ class Parametre extends PolarObject {
                 ->select('Valeur')->where('Nom LIKE ?', $nom)
                 ->rawExecute();
             $value = $r->fetchColumn();
+            $r->closeCursor();
 
             if ($value != False)
                 self::$cache[$nom] = $value;

@@ -301,6 +301,9 @@ class PolarQuery {
             $obj->hydrate($ligne);
             $objects[] = $obj;
         }
+
+        $data->closeCursor();
+
         if (count($objects) == 1)
             return $objects[0];
         else
